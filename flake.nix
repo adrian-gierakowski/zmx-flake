@@ -12,7 +12,21 @@
   outputs =
     { zig2nix, zmx-src, ... }:
     let
-      inherit (zig2nix.inputs) flake-utils;
+      inherit (zig2nix.inputs) flake-utils nixpkgs;
+
+      cacheModule =
+        { config, lib, ... }:
+        {
+          options.zmx-flake.cache.enable = lib.mkEnableOption "the zmx binary cache" // {
+            default = true;
+          };
+          config = lib.mkIf config.zmx-flake.cache.enable {
+            nix.settings = {
+              substituters = [ "https://zmx.cachix.org" ];
+              trusted-public-keys = [ "zmx.cachix.org-1:9E7zdDiSiG9PnSl8RFHbZ3AW2NmIy/7SPK9rRwed7r4=" ];
+            };
+          };
+        };
     in
     flake-utils.lib.eachSystem
       [
@@ -22,7 +36,7 @@
       (
         system:
         let
-          pkgs = import zig2nix.inputs.nixpkgs { inherit system; };
+          pkgs = import nixpkgs { inherit system; };
           env = zig2nix.outputs.zig-env.${system} {
             zig = zig2nix.outputs.packages.${system}.zig-0_15_2;
           };
@@ -53,5 +67,9 @@
 
           formatter = pkgs.nixfmt;
         }
-      );
+      )
+    // {
+      nixosModules.default = cacheModule;
+      nixosModules.cache = cacheModule;
+    };
 }

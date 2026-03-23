@@ -1,0 +1,77 @@
+name: Update zmx
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # Daily at noon UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force build and push to Cachix (skip version check)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for new zmx release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api graphql -f query='
+            {
+              repository(owner: "neurosnap", name: "zmx") {
+                refs(refPrefix: "refs/tags/", last: 1, orderBy: {field: TAG_COMMIT_DATE, direction: ASC}) {
+                  nodes { name }
+                }
+              }
+            }' --jq '.data.repository.refs.nodes[0].name')
+          current=$(grep -oP 'url = "github:neurosnap/zmx/\K[^"]+' flake.nix)
+
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+          if [ "$current" = "$latest" ]; then
+            echo "Already up to date ($current)"
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update available: $current -> $latest"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enable unprivileged user namespaces
+        if: steps.check.outputs.needs_update == 'true' || inputs.force
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Install Nix
+        if: steps.check.outputs.needs_update == 'true' || inputs.force
+        uses: cachix/install-nix-action@v31
+
+      - name: Setup Cachix
+        if: steps.check.outputs.needs_update == 'true' || inputs.force
+        uses: cachix/cachix-action@v15
+        with:
+          name: zmx
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Update flake.nix and lock
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          sed -i "s|github:neurosnap/zmx/${{ steps.check.outputs.current }}|github:neurosnap/zmx/${{ steps.check.outputs.latest }}|" flake.nix
+          nix flake update zmx-src
+
+      - name: Build and push to Cachix
+        if: steps.check.outputs.needs_update == 'true' || inputs.force
+        run: nix build .#zmx
+
+      - name: Commit changes
+        if: steps.check.outputs.needs_update == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update zmx to ${{ steps.check.outputs.latest }}"
