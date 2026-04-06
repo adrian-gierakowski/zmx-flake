@@ -2,7 +2,7 @@
   description = "Nix flake for zmx - session persistence for terminal processes";
 
   inputs = {
-    zig2nix.url = "github:Cloudef/zig2nix";
+    zig2nix.url = "github:adrian-gierakowski/zig2nix/add-flake-compat-and-overlay";
     zmx-src = {
       url = "github:neurosnap/zmx/v0.4.2";
       flake = false;
@@ -11,10 +11,15 @@
       url = "github:neurosnap/zmx";
       flake = false;
     };
+    flake-compat = {
+      url = "github:NixOS/flake-compat";
+      flake = false;
+    };
   };
 
   outputs =
     {
+      self,
       zig2nix,
       zmx-src,
       zmx-src-main,
@@ -22,6 +27,31 @@
     }:
     let
       inherit (zig2nix.inputs) flake-utils nixpkgs;
+
+      mkZmx =
+        pkgs: env: src:
+        let
+          unwrapped = env.package {
+            inherit src;
+            zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
+            zigPreferMusl = true;
+          };
+        in
+        pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
+          ''
+            mkdir -p $out/bin
+            ln -s ${unwrapped}/bin/zmx $out/bin/zmx
+
+            echo '#compdef zmx' > _zmx
+            $out/bin/zmx completions zsh >> _zmx
+            installShellCompletion --zsh _zmx
+
+            $out/bin/zmx completions bash > zmx.bash
+            installShellCompletion --bash zmx.bash
+
+            $out/bin/zmx completions fish > zmx.fish
+            installShellCompletion --fish zmx.fish
+          '';
 
       cacheModule =
         { config, lib, ... }:
@@ -45,48 +75,22 @@
       (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
-          env = zig2nix.outputs.zig-env.${system} {
-            zig = zig2nix.outputs.packages.${system}.zig-0_15_2;
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              self.overlays.default
+            ];
           };
-
-          mkZmx =
-            src:
-            let
-              unwrapped = env.package {
-                inherit src;
-                zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
-                zigPreferMusl = true;
-              };
-            in
-            pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
-              ''
-                mkdir -p $out/bin
-                ln -s ${unwrapped}/bin/zmx $out/bin/zmx
-
-                echo '#compdef zmx' > _zmx
-                $out/bin/zmx completions zsh >> _zmx
-                installShellCompletion --zsh _zmx
-
-                $out/bin/zmx completions bash > zmx.bash
-                installShellCompletion --bash zmx.bash
-
-                $out/bin/zmx completions fish > zmx.fish
-                installShellCompletion --fish zmx.fish
-              '';
-
-          zmx = mkZmx zmx-src;
-          zmx-main = mkZmx zmx-src-main;
         in
         {
           packages = {
-            inherit zmx zmx-main;
-            default = zmx;
+            inherit (pkgs) zmx zmx-main;
+            default = pkgs.zmx;
           };
 
           apps.default = {
             type = "app";
-            program = "${zmx}/bin/zmx";
+            program = "${pkgs.zmx}/bin/zmx";
           };
 
           devShells.default = pkgs.mkShell {
@@ -101,6 +105,19 @@
         }
       )
     // {
+      overlays.default =
+        final: prev:
+        let
+          env = final.zig-env {
+            zig = final.zigv."0_15_2";
+          };
+        in
+        {
+          zmx = mkZmx final env zmx-src;
+          zmx-main = mkZmx final env zmx-src-main;
+          # adds zig-env,  zigv etc. to final
+        } // (zig2nix.overlays.default final prev);
+
       nixosModules.default = cacheModule;
       nixosModules.cache = cacheModule;
     };
