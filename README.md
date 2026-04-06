@@ -1,26 +1,53 @@
 # zmx-flake
 
-Nix flake for [zmx](https://github.com/neurosnap/zmx) — session persistence for terminal processes.
+Nix flake for [zmx](https://github.com/neurosnap/zmx).
 
-This is a community-maintained flake that builds zmx from source using [zig2nix](https://github.com/Cloudef/zig2nix). It exists because the upstream Nix packaging in nixpkgs is blocked by a [Zig compiler bug](https://codeberg.org/ziglang/zig/issues/30191).
+This repo builds zmx from source with [zig2nix](https://github.com/Cloudef/zig2nix). It exists because zmx is not in nixpkgs yet due to a [Zig compiler bug](https://codeberg.org/ziglang/zig/issues/30191).
 
-## Usage
+## Packages
 
-Run directly:
+- `zmx` — default package, pinned to the latest upstream tagged release
+- `zmx-main` — package built from upstream `main`
 
-```sh
-nix run github:thrawny/zmx-flake
+Use `zmx` unless you specifically want unreleased changes.
+
+## Install
+
+Add the flake input:
+
+```nix
+inputs.zmx-flake.url = "github:thrawny/zmx-flake";
 ```
 
-Add as a flake input:
+Then use one of these packages:
+
+### NixOS
+
+```nix
+environment.systemPackages = [
+  zmx-flake.packages.${pkgs.system}.zmx
+];
+```
+
+### Home Manager
+
+```nix
+home.packages = [
+  zmx-flake.packages.${pkgs.system}.zmx
+];
+```
+
+To use upstream `main` instead, replace `zmx` with `zmx-main`.
+
+## Cache
+
+The binary cache is enabled by default by the provided NixOS module.
+
+If you want to opt out:
 
 ```nix
 {
-  inputs.zmx-flake.url = "github:thrawny/zmx-flake";
-
-  outputs = { zmx-flake, ... }: {
-    # zmx-flake.packages.${system}.zmx
-  };
+  zmx-flake.cache.enable = false;
 }
 ```
 
