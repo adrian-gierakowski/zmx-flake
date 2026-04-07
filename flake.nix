@@ -35,22 +35,9 @@
             inherit src;
             zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
             zigPreferMusl = pkgs.stdenv.hostPlatform.isLinux;
-            nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.apple-sdk.frameworks;
-              [
-                CoreGraphics
-                CoreVideo
-                CoreText
-                IOKit
-                Cocoa
-                AppKit
-                QuartzCore
-                Security
-                CoreFoundation
-                Metal
-                MetalKit
-              ]
-            );
+            nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
+              pkgs.apple-sdk
+            ];
           };
         in
         pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
