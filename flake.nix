@@ -108,15 +108,15 @@
       overlays.default =
         final: prev:
         let
-          env = final.zig-env {
-            zig = final.zigv."0_15_2";
+          zmx2nix = zig2nix.overlays.default final prev;
+          env = zmx2nix.zig-env {
+            zig = zmx2nix.zigv."0_15_2";
           };
         in
         {
           zmx = mkZmx final env zmx-src;
           zmx-main = mkZmx final env zmx-src-main;
-          # adds zig-env,  zigv etc. to final
-        } // (zig2nix.overlays.default final prev);
+        };
 
       nixosModules.default = cacheModule;
       nixosModules.cache = cacheModule;
