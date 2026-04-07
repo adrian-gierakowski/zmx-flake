@@ -34,7 +34,23 @@
           unwrapped = env.package {
             inherit src;
             zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
-            zigPreferMusl = true;
+            zigPreferMusl = pkgs.stdenv.hostPlatform.isLinux;
+            nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
+              with pkgs.apple_sdk.frameworks;
+              [
+                CoreGraphics
+                CoreVideo
+                CoreText
+                IOKit
+                Cocoa
+                AppKit
+                QuartzCore
+                Security
+                CoreFoundation
+                Metal
+                MetalKit
+              ]
+            );
           };
         in
         pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
@@ -71,6 +87,8 @@
       [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ]
       (
         system:
