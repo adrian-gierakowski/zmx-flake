@@ -36,7 +36,7 @@
             zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
             zigPreferMusl = pkgs.stdenv.hostPlatform.isLinux;
             nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.apple_sdk.frameworks;
+              with pkgs.apple-sdk.frameworks;
               [
                 CoreGraphics
                 CoreVideo
