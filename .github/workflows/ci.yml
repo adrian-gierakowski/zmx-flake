@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable unprivileged user namespaces
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: zmx
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # Skip pushing on PRs from forks to avoid secret access issues
+          skipPush: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+
+      - name: Build zmx
+        run: nix build .#zmx --print-out-paths
+
+      - name: Build zmx-main
+        run: nix build .#zmx-main --print-out-paths
