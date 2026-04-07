@@ -29,10 +29,10 @@
       inherit (zig2nix.inputs) flake-utils nixpkgs;
 
       mkZmx =
-        pkgs: env: src:
+        pkgs: env: src: zigTarget:
         let
           unwrapped = env.package {
-            inherit src;
+            inherit src zigTarget;
             zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
             zigPreferMusl = pkgs.stdenv.hostPlatform.isLinux;
             nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
@@ -114,13 +114,23 @@
         final: prev:
         let
           zmx2nix = zig2nix.overlays.default final prev;
+          # Zig 0.15.2 has a crash on macOS with lazy dependencies.
+          # We use 0.15.1 on Darwin as a workaround.
+          zigVersion = if final.stdenv.isDarwin then "0_15_1" else "0_15_2";
           env = zmx2nix.zig-env {
-            zig = zmx2nix.zigv."0_15_2";
+            zig = zmx2nix.zigv.${zigVersion};
           };
+          # zig2nix generates aarch64-macos-none which can confuse Zig's SDK detection.
+          # We explicitly set a canonical target for macOS.
+          zigTarget =
+            if final.stdenv.isDarwin then
+              (if final.stdenv.isAarch64 then "aarch64-macos" else "x86_64-macos")
+            else
+              null;
         in
         {
-          zmx = mkZmx final env zmx-src;
-          zmx-main = mkZmx final env zmx-src-main;
+          zmx = mkZmx final env zmx-src zigTarget;
+          zmx-main = mkZmx final env zmx-src-main zigTarget;
         };
 
       nixosModules.default = cacheModule;
