@@ -60,22 +60,22 @@
                 zigPreferMusl = pkgs.stdenv.isLinux;
                 nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                   xcbuild
-                  apple_sdk.frameworks.CoreServices
-                  apple_sdk.frameworks.Foundation
-                  apple_sdk.frameworks.AppKit
-                  apple_sdk.frameworks.WebKit
-                  apple_sdk.frameworks.Cocoa
+                  apple-sdk_14.frameworks.CoreServices
+                  apple-sdk_14.frameworks.Foundation
+                  apple-sdk_14.frameworks.AppKit
+                  apple-sdk_14.frameworks.WebKit
+                  apple-sdk_14.frameworks.Cocoa
                 ]);
               };
             in
             pkgs.runCommand "zmx-${unwrapped.version}" {
               nativeBuildInputs = [ pkgs.installShellFiles ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                 xcbuild
-                apple_sdk.frameworks.CoreServices
-                apple_sdk.frameworks.Foundation
-                apple_sdk.frameworks.AppKit
-                apple_sdk.frameworks.WebKit
-                apple_sdk.frameworks.Cocoa
+                apple-sdk_14.frameworks.CoreServices
+                apple-sdk_14.frameworks.Foundation
+                apple-sdk_14.frameworks.AppKit
+                apple-sdk_14.frameworks.WebKit
+                apple-sdk_14.frameworks.Cocoa
               ]);
             }
               ''
