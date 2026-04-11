@@ -57,10 +57,29 @@
               unwrapped = env.package {
                 inherit src;
                 zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
-                zigPreferMusl = true;
+                zigPreferMusl = pkgs.stdenv.isLinux;
+                nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+                  xcbuild
+                  darwin.apple_sdk.frameworks.CoreServices
+                  darwin.apple_sdk.frameworks.Foundation
+                  darwin.apple_sdk.frameworks.AppKit
+                  darwin.apple_sdk.frameworks.WebKit
+                  darwin.apple_sdk.frameworks.Cocoa
+                  (writeShellScriptBin "xcrun" "echo /")
+                ]);
               };
             in
-            pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
+            pkgs.runCommand "zmx-${unwrapped.version}" {
+              nativeBuildInputs = [ pkgs.installShellFiles ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+                xcbuild
+                darwin.apple_sdk.frameworks.CoreServices
+                darwin.apple_sdk.frameworks.Foundation
+                darwin.apple_sdk.frameworks.AppKit
+                darwin.apple_sdk.frameworks.WebKit
+                darwin.apple_sdk.frameworks.Cocoa
+                (writeShellScriptBin "xcrun" "echo /")
+              ]);
+            }
               ''
                 mkdir -p $out/bin
                 ln -s ${unwrapped}/bin/zmx $out/bin/zmx
