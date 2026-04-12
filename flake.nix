@@ -60,14 +60,14 @@
                 zigPreferMusl = pkgs.stdenv.isLinux;
                 nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                   xcbuild
-                  apple-sdk_14
+                  apple-sdk
                 ]);
               };
             in
             pkgs.runCommand "zmx-${unwrapped.version}" {
               nativeBuildInputs = [ pkgs.installShellFiles ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                 xcbuild
-                apple-sdk_14
+                apple-sdk
               ]);
             }
               ''
