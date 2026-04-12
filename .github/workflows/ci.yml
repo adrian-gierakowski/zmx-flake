@@ -35,7 +35,7 @@ jobs:
           skipPush: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Build zmx
-        run: nix build .#zmx --print-out-paths
+        run: nix build .#zmx --print-out-paths -L
 
       - name: Build zmx-main
-        run: nix build .#zmx-main --print-out-paths
+        run: nix build .#zmx-main --print-out-paths -L
