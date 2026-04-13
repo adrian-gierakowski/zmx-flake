@@ -57,10 +57,24 @@
               unwrapped = env.package {
                 inherit src;
                 zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
-                zigPreferMusl = true;
+                                zigPreferMusl = pkgs.stdenv.isLinux;
+                zigTarget = if system == "aarch64-darwin" then "aarch64-macos" else if system == "x86_64-darwin" then "x86_64-macos" else if system == "aarch64-linux" then "aarch64-linux" else "x86_64-linux";
+                nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+                  xcbuild
+                  apple-sdk
+                  (writeShellScriptBin "xcrun" "echo /")
+                  (writeShellScriptBin "cc" "if [[ \"$*\" == *\"-E -Wp,-v -xc /dev/null\"* ]]; then echo '#include <...> search starts here:'; echo ' /usr/include'; echo 'End of search list.'; else exec ${stdenv.cc}/bin/cc \"$@\"; fi")
+                ]);
               };
             in
-            pkgs.runCommand "zmx-${unwrapped.version}" { nativeBuildInputs = [ pkgs.installShellFiles ]; }
+            pkgs.runCommand "zmx-${unwrapped.version}" {
+              nativeBuildInputs = [ pkgs.installShellFiles ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
+                xcbuild
+                apple-sdk
+                (writeShellScriptBin "xcrun" "echo /")
+                (writeShellScriptBin "cc" "if [[ \"$*\" == *\"-E -Wp,-v -xc /dev/null\"* ]]; then echo '#include <...> search starts here:'; echo ' /usr/include'; echo 'End of search list.'; else exec ${stdenv.cc}/bin/cc \"$@\"; fi")
+              ]);
+            }
               ''
                 mkdir -p $out/bin
                 ln -s ${unwrapped}/bin/zmx $out/bin/zmx
