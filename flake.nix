@@ -62,6 +62,8 @@
                 nativeBuildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                   xcbuild
                   apple-sdk
+                  (writeShellScriptBin "xcrun" "echo /")
+                  (writeShellScriptBin "cc" "if [[ \"$*\" == *\"-E -Wp,-v -xc /dev/null\"* ]]; then echo '#include <...> search starts here:'; echo ' /usr/include'; echo 'End of search list.'; else exec ${stdenv.cc}/bin/cc \"$@\"; fi")
                 ]);
               };
             in
@@ -69,6 +71,8 @@
               nativeBuildInputs = [ pkgs.installShellFiles ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
                 xcbuild
                 apple-sdk
+                (writeShellScriptBin "xcrun" "echo /")
+                (writeShellScriptBin "cc" "if [[ \"$*\" == *\"-E -Wp,-v -xc /dev/null\"* ]]; then echo '#include <...> search starts here:'; echo ' /usr/include'; echo 'End of search list.'; else exec ${stdenv.cc}/bin/cc \"$@\"; fi")
               ]);
             }
               ''
